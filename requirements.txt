@@ -1,8 +1,11 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
 streamlit
 opencv-python-headless
 ultralytics
 tf-keras
-tensorflow
+tensorflow-cpu
 h5py
 numpy<2
 pillow
