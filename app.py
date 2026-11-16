@@ -1,4 +1,5 @@
 import gc
+import io
 import os
 import cv2
 import h5py
@@ -159,14 +160,15 @@ if arquivo_img is not None:
     with st.spinner("Analisando uniforme..."):
         resultado_bgr, classe, confianca = detectar_e_classificar(frame_bgr)
 
-    # Converte para imagem PIL antes de exibir (evita o ícone quebrado no navegador)
+    # Converte para bytes PNG em memória (garante exibição em qualquer versão do Streamlit)
     resultado_rgb = cv2.cvtColor(resultado_bgr, cv2.COLOR_BGR2RGB)
     imagem_final = Image.fromarray(resultado_rgb)
+    buffer = io.BytesIO()
+    imagem_final.save(buffer, format="PNG")
 
     st.image(
-        imagem_final,
+        buffer.getvalue(),
         caption=f"Resultado: {classe} ({confianca * 100:.1f}%)",
-        width="stretch",
     )
 
     if classe.lower().startswith("com"):
