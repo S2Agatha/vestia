@@ -157,3 +157,34 @@ modo = st.radio(
     ["📁 Enviar uma foto", "📷 Tirar foto pela câmera"],
     horizontal=True,
 )
+
+arquivo_img = None
+if modo == "📁 Enviar uma foto":
+    arquivo_img = st.file_uploader(
+        "Selecione uma imagem", type=["jpg", "jpeg", "png", "webp"]
+    )
+else:
+    arquivo_img = st.camera_input("Tire uma foto da camisa")
+
+if arquivo_img is not None:
+    imagem_pil = Image.open(arquivo_img).convert("RGB")
+    frame_bgr = cv2.cvtColor(np.array(imagem_pil), cv2.COLOR_RGB2BGR)
+
+    with st.spinner("Analisando uniforme..."):
+        resultado_bgr, classe, confianca = detectar_e_classificar(frame_bgr)
+
+    exibir_imagem_garantida(
+        resultado_bgr,
+        legenda=f"Resultado: {classe} ({confianca * 100:.1f}%)",
+    )
+
+    if classe.lower().startswith("com"):
+        st.success(
+            f"✅ **Uniforme Escolar Identificado!** (Confiança: {confianca * 100:.1f}%)"
+        )
+    elif classe == "Nenhuma pessoa detectada":
+        st.error("❌ Nenhuma pessoa foi detectada na imagem.")
+    else:
+        st.warning(
+            f"⚠️ **Não parece ser um uniforme escolar** ({classe} — {confianca * 100:.1f}%)"
+        )
