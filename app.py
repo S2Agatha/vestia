@@ -1,5 +1,5 @@
+import base64
 import gc
-import io
 import os
 import cv2
 import h5py
@@ -36,6 +36,20 @@ def carregar_modelos():
 
 
 detector_pose, model, class_names = carregar_modelos()
+
+
+def exibir_imagem_garantida(imagem_bgr, legenda=""):
+    """Converte a imagem para Base64 e exibe via HTML direto (nunca quebra no Streamlit Cloud)."""
+    sucesso, buffer = cv2.imencode(".jpg", imagem_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+    if sucesso:
+        img_b64 = base64.b64encode(buffer).decode("utf-8")
+        html = f"""
+        <div style="text-align: center; margin: 15px 0;">
+            <img src="data:image/jpeg;base64,{img_b64}" style="max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.4);" />
+            <p style="color: #a0a0a0; font-size: 0.9rem; margin-top: 8px;">{legenda}</p>
+        </div>
+        """
+        st.markdown(html, unsafe_allow_html=True)
 
 
 def classificar_roupa(recorte_bgr):
@@ -85,7 +99,6 @@ def detectar_e_classificar(frame):
         return frame, "Nenhuma pessoa detectada", 0.0
 
     lm = resultados.pose_landmarks.landmark
-    # Pontos no MediaPipe: 11 e 12 = ombros | 23 e 24 = quadris
     ombro_esq, ombro_dir = lm[11], lm[12]
     quadril_esq, quadril_dir = lm[23], lm[24]
 
@@ -144,40 +157,3 @@ modo = st.radio(
     ["📁 Enviar uma foto", "📷 Tirar foto pela câmera"],
     horizontal=True,
 )
-
-arquivo_img = None
-if modo == "📁 Enviar uma foto":
-    arquivo_img = st.file_uploader(
-        "Selecione uma imagem", type=["jpg", "jpeg", "png", "webp"]
-    )
-else:
-    arquivo_img = st.camera_input("Tire uma foto da camisa")
-
-if arquivo_img is not None:
-    imagem_pil = Image.open(arquivo_img).convert("RGB")
-    frame_bgr = cv2.cvtColor(np.array(imagem_pil), cv2.COLOR_RGB2BGR)
-
-    with st.spinner("Analisando uniforme..."):
-        resultado_bgr, classe, confianca = detectar_e_classificar(frame_bgr)
-
-    # Converte para bytes PNG em memória (garante exibição em qualquer versão do Streamlit)
-    resultado_rgb = cv2.cvtColor(resultado_bgr, cv2.COLOR_BGR2RGB)
-    imagem_final = Image.fromarray(resultado_rgb)
-    buffer = io.BytesIO()
-    imagem_final.save(buffer, format="PNG")
-
-    st.image(
-        buffer.getvalue(),
-        caption=f"Resultado: {classe} ({confianca * 100:.1f}%)",
-    )
-
-    if classe.lower().startswith("com"):
-        st.success(
-            f"✅ **Uniforme Escolar Identificado!** (Confiança: {confianca * 100:.1f}%)"
-        )
-    elif classe == "Nenhuma pessoa detectada":
-        st.error("❌ Nenhuma pessoa foi detectada na imagem.")
-    else:
-        st.warning(
-            f"⚠️ **Não parece ser um uniforme escolar** ({classe} — {confianca * 100:.1f}%)"
-        )
