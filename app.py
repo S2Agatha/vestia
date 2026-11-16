@@ -1,8 +1,10 @@
+import gc
 import os
 import cv2
 import h5py
 import numpy as np
 import streamlit as st
+import torch
 from PIL import Image
 from tf_keras.models import load_model
 from ultralytics import YOLO
@@ -90,7 +92,15 @@ def obter_caixa_roupa(keypoints_xy, keypoints_conf, caixa_pessoa, img_w, img_h):
 
 
 def detectar_e_classificar(frame):
-    resultados = detector_pose(frame, conf=0.5, verbose=False)
+    # Limita a largura máxima da imagem para evitar pico de memória RAM
+    h_orig, w_orig = frame.shape[:2]
+    if w_orig > 800:
+        escala = 800 / w_orig
+        frame = cv2.resize(frame, (800, int(h_orig * escala)))
+
+    with torch.no_grad():
+        resultados = detector_pose(frame, conf=0.5, imgsz=320, verbose=False)
+
     caixas = resultados[0].boxes
 
     if len(caixas) == 0:
@@ -123,6 +133,7 @@ def detectar_e_classificar(frame):
     cv2.rectangle(frame, (rx1, max(0, ry1 - altura_texto - 15)), (rx1 + largura_texto + 10, ry1), cor, -1)
     cv2.putText(frame, texto_resultado, (rx1 + 5, max(20, ry1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
 
+    gc.collect()
     return frame, classe, confianca
 
 
