@@ -1,9 +1,6 @@
---extra-index-url https://download.pytorch.org/whl/cpu
-torch
-torchvision
 streamlit
 opencv-python-headless
-ultralytics
+mediapipe==0.10.14
 tf-keras
 tensorflow-cpu
 h5py
